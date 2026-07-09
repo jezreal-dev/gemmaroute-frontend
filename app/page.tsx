@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SplashScreen } from "@/components/ui/SplashScreen";
 import { Logo } from "@/components/ui/Logo";
+import { backendLive } from "@/lib/api";
 
 type Message = {
   role: "user" | "assistant";
@@ -38,6 +39,7 @@ export default function Page() {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: "Ask me anything — simple stuff stays local and free, harder stuff escalates to the cloud automatically." },
   ]);
+  const [isLive, setIsLive] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [stats, setStats] = useState({ totalSaved: 0, totalQueries: 0, localCount: 0, cloudCount: 0, avgLatencyMs: 0, avgQualityScore: 0 });
@@ -50,7 +52,7 @@ export default function Page() {
   }, [messages]);
 
   useEffect(() => {
-    const load = () => fetchStats().then(setStats).catch(() => {});
+    const load = () => fetchStats().then((s) => { setStats(s); setIsLive(backendLive); }).catch(() => setIsLive(false));
     load();
     const id = setInterval(load, 3000);
     return () => clearInterval(id);
@@ -99,8 +101,8 @@ export default function Page() {
           <Logo size={26} />
         </div>
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-          <Activity size={14} className="text-emerald-400" />
-          live demo
+          <Activity size={14} className={isLive ? "text-emerald-400" : "text-zinc-600"} />
+          {isLive ? "live backend" : "demo mode"}
         </div>
       </div>
 
