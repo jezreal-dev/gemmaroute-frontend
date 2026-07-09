@@ -22,8 +22,8 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
       }`}
     >
       <LogoIcon size={64} />
-      <div className="mt-4 font-mono font-semibold text-2xl">
-        Gemma<span className="text-emerald-400">Route</span>
+      <div className="mt-4 font-mono font-semibold text-2xl text-zinc-100">
+         Gemma<span className="text-emerald-400">Route</span>
       </div>
       <div className="mt-2 text-[11px] font-mono tracking-[2px] text-zinc-500">
         AMD AI HACKATHON · TRACK 3
