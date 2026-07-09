@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { SplashScreen } from "@/components/ui/SplashScreen";
+import { Logo } from "@/components/ui/Logo";
 
 type Message = {
   role: "user" | "assistant";
@@ -32,6 +34,7 @@ function tierColor(tier: string) {
 }
 
 export default function Page() {
+  const [showSplash, setShowSplash] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: "Ask me anything — simple stuff stays local and free, harder stuff escalates to the cloud automatically." },
   ]);
@@ -82,6 +85,10 @@ export default function Page() {
 
   const localPct = stats.totalQueries ? Math.round((stats.localCount / stats.totalQueries) * 100) : null;
   const totalSavedDisplay = stats.totalSaved || runningSaved;
+  
+  if (showSplash) {
+  return <SplashScreen onDone={() => setShowSplash(false)} />;
+}
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
@@ -89,9 +96,7 @@ export default function Page() {
       <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
         <div>
           <div className="text-[11px] font-mono tracking-[2px] text-emerald-400">AMD AI HACKATHON · TRACK 3</div>
-          <div className="text-xl font-mono font-semibold">
-            Gemma<span className="text-emerald-400">Route</span>
-          </div>
+          <Logo size={26} />
         </div>
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
           <Activity size={14} className="text-emerald-400" />
