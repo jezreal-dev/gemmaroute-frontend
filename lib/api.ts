@@ -13,6 +13,7 @@ export type RouteResult = {
   modelUsed: string;
   response: string;
   sessionId: string;
+  latencyMs: number;
 };
 
 export type StatsResult = {
@@ -34,7 +35,6 @@ async function callApi<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": API_KEY,
-      "ngrok-skip-browser-warning": "69420",
       ...(options.headers || {}),
     },
   }).catch(() => null);
@@ -54,7 +54,8 @@ export async function fetchStats(): Promise<StatsResult> {
     return {
       totalSaved: Number(data.total_saved_vs_always_complex_usd ?? 0),
       totalQueries: Number(data.total_requests ?? 0),
-      localCount: Number(dist.simple ?? 0),
+      // trivial tier is free/local — count it alongside simple
+      localCount: Number(dist.trivial ?? 0) + Number(dist.simple ?? 0),
       cloudCount: Number(dist.medium ?? 0) + Number(dist.complex ?? 0),
       avgLatencyMs: Number(data.avg_latency_ms ?? 0),
       avgQualityScore: Number(data.avg_quality_score ?? 0),
@@ -81,16 +82,20 @@ export async function routeQuery(prompt: string): Promise<RouteResult> {
     });
     const routing = data.routing ?? {};
     const modelUsed: string = routing.model_used ?? "";
-    const isCloud = modelUsed.toLowerCase().includes("fireworks");
+    const finalTier: string = routing.final_tier ?? routing.initial_tier ?? "unknown";
+    // Use tier to determine route — more reliable than parsing model name strings
+    // (avoids misclassifying [CB_FALLBACK] tags as "local")
+    const isCloud = finalTier === "medium" || finalTier === "complex";
 
     return {
       route: isCloud ? "cloud" : "local",
       cost: Number(routing.estimated_cost_usd ?? 0),
       costSaved: Number(routing.cost_saved_vs_max_usd ?? 0),
-      tier: routing.final_tier ?? routing.initial_tier ?? "unknown",
+      tier: finalTier,
       modelUsed,
       response: data.response ?? "",
       sessionId: data.session_id ?? sessionId,
+      latencyMs: Number(routing.latency_ms ?? 0),
     };
   } catch (err) {
     return mockRoute(prompt);
@@ -188,11 +193,12 @@ const MOCK_RESPONSES: Record<string, string[]> = {
   ],
 };
 
+// Model names match the real backend config.py exactly
 const TIER_MODELS: Record<string, string> = {
   trivial: "heuristic_filter [mock]",
-  simple:  "ollama/gemma:2b [mock]",
-  medium:  "accounts/fireworks/models/mixtral-8x7b-instruct [mock]",
-  complex: "accounts/fireworks/models/llama-v3p1-405b-instruct [mock]",
+  simple:  "gemma:2b [mock]",
+  medium:  "accounts/fireworks/models/gemma2-9b-it [mock]",
+  complex: "accounts/fireworks/models/gemma2-27b-it [mock]",
 };
 
 function mockRoute(query: string): RouteResult {
@@ -225,5 +231,6 @@ function mockRoute(query: string): RouteResult {
     modelUsed: TIER_MODELS[tier],
     response,
     sessionId,
+    latencyMs: isLocal ? Math.random() * 80 + 20 : Math.random() * 600 + 400,
   };
 }

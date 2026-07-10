@@ -29,7 +29,7 @@ type LogRow = {
 };
 
 function tierColor(tier: string) {
-  if (tier === "local" || tier === "simple") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+  if (tier === "trivial" || tier === "local" || tier === "simple") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
   if (tier === "medium") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
   return "bg-violet-500/15 text-violet-400 border-violet-500/30";
 }
@@ -75,7 +75,7 @@ export default function Page() {
         prompt: text.length > 40 ? text.slice(0, 40) + "..." : text,
         tier: result.tier,
         model: result.modelUsed,
-        latencyMs: 0,
+        latencyMs: result.latencyMs,
         cost: result.cost,
         saved: result.costSaved,
       },
@@ -86,7 +86,8 @@ export default function Page() {
   }
 
   const localPct = stats.totalQueries ? Math.round((stats.localCount / stats.totalQueries) * 100) : null;
-  const totalSavedDisplay = stats.totalSaved || runningSaved;
+  // Use DB total as the base; add current session's savings on top
+  const totalSavedDisplay = stats.totalSaved + runningSaved;
   
   if (showSplash) {
   return <SplashScreen onDone={() => setShowSplash(false)} />;
