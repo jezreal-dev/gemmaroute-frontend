@@ -18,7 +18,7 @@ export function LogoIcon({ size = 32 }: { size?: number }) {
 
 export function Logo({ size = 32, showWordmark = true }: { size?: number; showWordmark?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex max-sm:justify-center items-center gap-2.5">
       <LogoIcon size={size} />
       {showWordmark && (
         <span className="font-mono font-semibold" style={{ fontSize: size * 0.6 }}>

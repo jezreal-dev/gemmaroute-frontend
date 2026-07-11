@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SplashScreen } from "@/components/ui/SplashScreen";
 import { Logo } from "@/components/ui/Logo";
 import { backendLive } from "@/lib/api";
@@ -36,6 +37,7 @@ function tierColor(tier: string) {
 
 export default function Page() {
   const [showSplash, setShowSplash] = useState(true);
+  const [statsLoaded, setStatsLoaded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: "Ask me anything — simple stuff stays local and free, harder stuff escalates to the cloud automatically." },
   ]);
@@ -52,7 +54,7 @@ export default function Page() {
   }, [messages]);
 
   useEffect(() => {
-    const load = () => fetchStats().then((s) => { setStats(s); setIsLive(backendLive); }).catch(() => setIsLive(false));
+    const load = () => fetchStats().then((s) => { setStats(s); setIsLive(backendLive); setStatsLoaded(true); }).catch(() => { setIsLive(false); setStatsLoaded(true); });
     load();
     const id = setInterval(load, 3000);
     return () => clearInterval(id);
@@ -82,57 +84,55 @@ export default function Page() {
       ...prev,
     ].slice(0, 8));
     setSending(false);
-    fetchStats().then(setStats).catch(() => {});
+    fetchStats().then(setStats).catch(() => { });
   }
 
   const localPct = stats.totalQueries ? Math.round((stats.localCount / stats.totalQueries) * 100) : null;
   // Use DB total as the base; add current session's savings on top
   const totalSavedDisplay = stats.totalSaved + runningSaved;
-  
+
   if (showSplash) {
-  return <SplashScreen onDone={() => setShowSplash(false)} />;
-}
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       {/* Header */}
-      <div className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-mono tracking-[2px] text-emerald-400">AMD AI HACKATHON · TRACK 3</div>
+      <div className="border-b border-zinc-800 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center sm:justify-between  gap-3 sm:gap-0">
+        <div className="text-center sm:text-left">
+          <div className="text-[11px] tracking-[2px] text-emerald-400">AMD AI HACKATHON · TRACK 3</div>
           <Logo size={26} />
         </div>
-        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
           <Activity size={14} className={isLive ? "text-emerald-400" : "text-zinc-600"} />
           {isLive ? "live backend" : "demo mode"}
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row flex-1 gap-6 p-6">
+      <div className="flex flex-col lg:flex-row flex-1 gap-4 sm:gap-6 p-4 sm:p-6">
         {/* Left: Chat */}
-        <div className="flex-1 flex flex-col min-h-[420px]">
+        <div className="flex-1 flex flex-col min-h-[300px] sm:min-h-[420px]">
           <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1 max-h-[460px]">
             {messages.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
                 {m.role === "assistant" && m.route && (
                   <div
-                    className={`flex items-center gap-1 text-[11px] font-mono mb-1 opacity-90 ${
-                      m.route === "local" ? "text-emerald-400" : "text-violet-400"
-                    }`}
+                    className={`flex items-center gap-1 text-[11px] mb-1 opacity-90 ${m.route === "local" ? "text-emerald-400" : "text-violet-400"
+                      }`}
                   >
                     {m.route === "local" ? <Zap size={11} /> : <Cloud size={11} />}
                     {m.route === "local" ? "▸ routed local · $0.00" : `▸ escalated → Fireworks · $${(m.cost ?? 0).toFixed(3)}`}
                   </div>
                 )}
                 <div
-                  className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[80%] border border-zinc-800 ${
-                    m.role === "user" ? "bg-zinc-800" : "bg-zinc-900"
-                  }`}
+                  className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-[80%] border border-zinc-800 ${m.role === "user" ? "bg-zinc-800" : "bg-zinc-900"
+                    }`}
                 >
                   {m.text}
                 </div>
               </div>
             ))}
-            {sending && <div className="text-zinc-400 font-mono text-xs">routing…</div>}
+            {sending && <div className="text-zinc-400 text-xs">routing…</div>}
           </div>
 
           <div className="mt-4 flex items-center gap-2">
@@ -160,104 +160,179 @@ export default function Page() {
         </div>
 
         {/* Right: Dashboard */}
-        <div className="w-full xl:w-[420px] flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-mono text-zinc-400 flex items-center gap-1.5">
-                  <TrendingDown size={13} className="text-amber-400" /> TOTAL SAVED
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-mono font-bold text-amber-400">${totalSavedDisplay.toFixed(3)}</div>
-              </CardContent>
-            </Card>
+        <div className="w-full lg:w-[420px] flex flex-col gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            {!statsLoaded ? (
+              <>
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <TrendingDown size={13} className="text-amber-400" /> TOTAL SAVED
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-20 bg-zinc-800" />
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-mono text-zinc-400 flex items-center gap-1.5">
-                  <Zap size={13} className="text-emerald-400" /> REQUESTS
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-mono font-bold">{stats.totalQueries}</div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">{localPct ?? 0}% local</div>
-              </CardContent>
-            </Card>
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Zap size={13} className="text-emerald-400" /> REQUESTS
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-16 bg-zinc-800 mb-1.5" />
+                    <Skeleton className="h-3 w-24 bg-zinc-800" />
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-mono text-zinc-400 flex items-center gap-1.5">
-                  <Gauge size={13} className="text-sky-400" /> AVG LATENCY
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-mono font-bold">{(stats.avgLatencyMs ?? 0).toFixed(0)}ms</div>
-              </CardContent>
-            </Card>
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Gauge size={13} className="text-sky-400" /> AVG LATENCY
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-16 bg-zinc-800" />
+                  </CardContent>
+                </Card>
 
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-mono text-zinc-400 flex items-center gap-1.5">
-                  <Activity size={13} className="text-rose-400" /> QUALITY
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-mono font-bold">{(stats.avgQualityScore * 100).toFixed(0)}%</div>
-              </CardContent>
-            </Card>
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Activity size={13} className="text-rose-400" /> QUALITY
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-16 bg-zinc-800" />
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <>
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <TrendingDown size={13} className="text-amber-400" /> TOTAL SAVED
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold text-amber-400">${totalSavedDisplay.toFixed(3)}</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Zap size={13} className="text-emerald-400" /> REQUESTS
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl text-zinc-200  font-bold">{stats.totalQueries}</div>
+                    <div className="text-[10px] sm:text-[11px] text-zinc-500 mt-0.5">{localPct ?? 0}% local</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Gauge size={13} className="text-sky-400" /> AVG LATENCY
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl text-zinc-200 font-bold">{(stats.avgLatencyMs ?? 0).toFixed(0)}ms</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs text-zinc-400 flex items-center gap-1.5">
+                      <Activity size={13} className="text-rose-400" /> QUALITY
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl text-zinc-200 font-bold">{(stats.avgQualityScore * 100).toFixed(0)}%</div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-            <div className="text-[11px] font-mono text-zinc-400 mb-2">ROUTE SPLIT</div>
-            <div className="bg-zinc-950 rounded-md overflow-hidden h-2.5 flex">
-               {localPct === null ? (
-                 <div className="bg-zinc-800 h-full w-full" />
-             ) : (
-               <>
-                  <div className="bg-emerald-400 h-full" style={{ width: `${localPct}%` }} />
-                  <div className="bg-violet-400 h-full" style={{ width: `${100 - localPct}%` }} />
-               </>
-          )}
-         </div>
-            <div className="flex justify-between mt-2 text-[11px] font-mono text-zinc-500">
-              <span className="text-emerald-400">{stats.localCount} local</span>
-              <span className="text-violet-400">{stats.cloudCount} cloud</span>
-            </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-2 sm:p-3">
+            <div className="text-[10px] sm:text-[11px] text-zinc-400 mb-2">ROUTE SPLIT</div>
+            {!statsLoaded ? (
+              <>
+                <Skeleton className="h-2.5 w-full bg-zinc-800 rounded-md mb-2" />
+                <div className="flex justify-between">
+                  <Skeleton className="h-3 w-16 bg-zinc-800" />
+                  <Skeleton className="h-3 w-16 bg-zinc-800" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-zinc-950 rounded-md overflow-hidden h-2.5 flex">
+                  {localPct === null ? (
+                    <div className="bg-zinc-800 h-full w-full" />
+                  ) : (
+                    <>
+                      <div className="bg-emerald-400 h-full" style={{ width: `${localPct}%` }} />
+                      <div className="bg-violet-400 h-full" style={{ width: `${100 - localPct}%` }} />
+                    </>
+                  )}
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] sm:text-[11px] text-zinc-500">
+                  <span className="text-emerald-400">{stats.localCount} local</span>
+                  <span className="text-violet-400">{stats.cloudCount} cloud</span>
+                </div>
+              </>
+            )}
           </div>
 
           <Separator className="bg-zinc-800" />
 
           <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-sm font-mono text-zinc-300">RECENT LOGS</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs sm:text-sm text-zinc-300">RECENT LOGS</CardTitle>
             </CardHeader>
             <CardContent>
-              {logs.length === 0 ? (
-                <div className="text-xs text-zinc-500 font-mono">Send a message to see logs here.</div>
+              {!statsLoaded ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Skeleton className="h-4 flex-1 bg-zinc-800" />
+                      <Skeleton className="h-4 w-16 bg-zinc-800" />
+                      <Skeleton className="h-4 w-12 bg-zinc-800" />
+                    </div>
+                  ))}
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="text-[11px] sm:text-xs text-zinc-500">Send a message to see logs here.</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-zinc-800 hover:bg-transparent">
-                      <TableHead className="text-zinc-500">Prompt</TableHead>
-                      <TableHead className="text-zinc-500">Tier</TableHead>
-                      <TableHead className="text-zinc-500 text-right">Saved</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow key={log.id} className="border-zinc-800">
-                        <TableCell className="text-zinc-300 font-mono text-xs">{log.prompt}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={tierColor(log.tier)}>
-                            {log.tier}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-emerald-400">${log.saved.toFixed(5)}</TableCell>
+                <div className="overflow-x-auto -mx-3 sm:mx-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-zinc-800 hover:bg-transparent">
+                        <TableHead className="text-[10px] sm:text-xs text-zinc-500">Prompt</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs text-zinc-500">Tier</TableHead>
+                        <TableHead className="text-[10px] sm:text-xs text-zinc-500 text-right">Saved</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {logs.map((log) => (
+                        <TableRow key={log.id} className="border-zinc-800">
+                          <TableCell className="text-zinc-300 text-[10px] sm:text-xs">{log.prompt}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={`${tierColor(log.tier)} text-[9px] sm:text-[10px]`}>
+                              {log.tier}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-[10px] sm:text-xs text-emerald-400">${log.saved.toFixed(5)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
