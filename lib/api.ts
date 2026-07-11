@@ -35,6 +35,7 @@ async function callApi<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       "X-API-Key": API_KEY,
+      "ngrok-skip-browser-warning": "1",
       ...(options.headers || {}),
     },
   }).catch(() => null);
