@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GemmaRoute — Smart AI Query Router",
+  title: "GemmaRoute",
   description: "Open-source semantic router that cuts AI API costs by routing simple queries to local models and complex ones to the cloud.",
 };
 
